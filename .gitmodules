@@ -1,0 +1,3 @@
+[submodule "modules/picoDrivers"]
+	path = modules/picoDrivers
+	url = https://github.com/RichardEWillis/picoDrivers.git
