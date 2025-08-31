@@ -31,14 +31,58 @@ include(pico_sdk_import.cmake)
 # Set project name for convenience
 set(PNAME JBC200W)
 
-project(${PNAME} C CXX ASM)
+# using the ssd1309 Graphics Driver
+set(DispDriver ssd1309)
+
+# pathing prefixes for additional code modules
+set(ModulePath        "${CMAKE_CURRENT_LIST_DIR}/modules")
+set(ModulePicoDrivers "${ModulePath}/picoDrivers")
+set(ModulePicoDisp    "${ModulePicoDrivers}/display")
+set(ModulePicoKey     "${ModulePicoDrivers}/keyboard")
+set(ModuleDispDriver  "${ModulePicoDisp}/${DispDriver}")
+
+# Cannot use a variable here for the project name as the stupid Pico parser does not resolve it..
+# it just "greps" this line to get the literal text. Hence you get problems like"
+# cannot launch project ${FOO}.elf in the debugger.
+project(JBC200W C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Add executable. Default name is the project name, version 0.1
+# Assemble source files
+set(DisplayBaseFiles
+    ${ModulePicoDisp}/displayBSP.c
+    ${ModulePicoDisp}/common/cpyutils.c
+    ${ModulePicoDisp}/common/led_overlay.c
+    ${ModulePicoDisp}/common/linegfx.c
+    ${ModulePicoDisp}/common/textgfx.c
+)
 
-add_executable(${PNAME} ${PNAME}.c )
+set(KeypadFiles
+    ${ModulePicoKey}/keygpio/keygpio.c
+)
+
+# display driver source files
+set(DispDrvrFiles
+    ${ModuleDispDriver}/${DispDriver}_driver.c
+)
+
+# local program source files
+set(localFiles
+    ${PNAME}.c
+    jbc_util.c
+    display.c
+    keypad.c
+    operations.c
+) 
+
+# Add executable. Default name is the project name, version 0.1
+add_executable(${PNAME} 
+    ${localFiles}
+    ${DisplayBaseFiles}
+    ${KeypadFiles}
+    ${DispDrvrFiles}
+)
 
 pico_set_program_name(${PNAME} "${PNAME}")
 pico_set_program_version(${PNAME} "0.1")
@@ -49,12 +93,24 @@ pico_enable_stdio_usb(${PNAME} 0)
 
 # Add the standard library to the build
 target_link_libraries(${PNAME}
-        pico_stdlib)
+    pico_stdlib
+    hardware_spi
+    pico_rand
+    hardware_timer
+)
 
 # Add the standard include files to the build
 target_include_directories(${PNAME} PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}
+    ${ModulePicoDisp}
+    ${ModulePicoDisp}/include
+    ${ModulePicoKey}/include
+    ${ModulePicoKey}/keygpio/
+    ${ModuleDispDriver}
 )
+
+# force compiler to make debuggable code (un optimized)
+SET(CMAKE_C_FLAGS_RELEASE "-g -O0")
 
 pico_add_extra_outputs(${PNAME})
 
