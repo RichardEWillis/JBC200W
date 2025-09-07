@@ -19,6 +19,9 @@
 #ifndef _OPERATIONS_H_
 #define _OPERATIONS_H_
 
+#include <stddef.h>
+#include <pico/types.h>
+
 // Setup Operations
 int ops_init(void);
 
@@ -31,5 +34,13 @@ int ops_reset(void);
 //  0 OK/Normal
 //  1 Error Occured
 int ops_poll(char k);
+
+// Getters
+
+uint32_t get_tipTempSetting(void);  // current temp setting for iron
+uint32_t get_tempScale(void);       // current temp scale ('C' | 'F')
+bool     get_wakeStatus(void);      // get wake status, true := running and heating
+uint32_t get_sleepDelay(void);      // get delay before sleeping
+
 
 #endif /* _OPERATIONS_H_ */

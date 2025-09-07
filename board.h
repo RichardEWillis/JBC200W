@@ -12,7 +12,6 @@
 
 #include <pico_bsp.h>
 
-
 /* JBC_PCB_BOARD_VER_3.1
  * Board configuration to support the JBC Iron Controller on a RP Pico 
  * mezzanine board.
@@ -110,8 +109,12 @@
 
 /* System Definitions and Maximums */
 
+#define IRON_START_TEMP         100 /* deg. Celcius */
+#define IRON_START_SCALE        'C'
+
 #define IRON_MAX_TEMP           800 /* F */
 #define IRON_MAX_WATT           200
 #define MAX_TEMP_PRESETS        4   /* 'A', 'B', 'C', 'D' */
+#define SLEEP_DELAY_DEFAULT     20  /* sleep delay default, [sec] */
 
 #endif /* BOARD_H */

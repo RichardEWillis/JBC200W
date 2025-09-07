@@ -6,6 +6,7 @@
 #include <operations.h>
 #include <display.h>
 #include <keypad.h>
+#include <analog_psu_ctrl.h>
 
 #define PWR_TOTAL   IRON_MAX_WATT
 #define PSET_COUNT  MAX_TEMP_PRESETS
@@ -45,6 +46,13 @@ int main()
     // Startup keypad scanning
     keypad_init();
     keypad_start();
+    // Startup Analog PSU Manager
+    apc_init();
+    apc_enable();
+
+    if ( ! apc_is_running() ) {
+        printf("[Analog PSU VMon] monitoring task did not start!\n");
+    }
 
     // test loop stage
     //char  key = 0;

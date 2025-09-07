@@ -74,7 +74,8 @@ set(localFiles
     display.c
     keypad.c
     operations.c
-) 
+    analog_psu_ctrl.c
+)
 
 # Add executable. Default name is the project name, version 0.1
 add_executable(${PNAME} 

@@ -23,11 +23,10 @@
  */
 
 #include <operations.h>
+#include <board.h>
 #include <display.h>
 #include <stdio.h>
 #include <math.h>
-#include <stddef.h>
-#include <pico/types.h>
 
 
 /* State Tree
@@ -54,6 +53,12 @@
  * '5' inc +10 temp
  * '8' inc +50 temp
  */
+
+// System Operation Settings
+static uint32_t setTempPoint  = IRON_START_TEMP;        // target temp. change manually or use a preset
+static char     tempUnits     = IRON_START_SCALE;       // temperature range, 'C' := Celcius, 'F' := Farenheit
+static bool     sw_isWoken    = true;                   // wake ~ Heating, sleeping ~ Cooling
+static uint32_t setSleepDelay = SLEEP_DELAY_DEFAULT;
 
 // The state function protype (parent type)
 typedef void * (*stateFunction)(char); // returns the next state, cast to (stateFunction). If NULL then abort.
@@ -142,11 +147,15 @@ static void * sf_ts_wt_vals(char k) {
 static void * sf_sset_chk_scale(char k) {
     if (k == 'C') {
         printf("*** [sf_sset_chk_scale] * Set Scale :: Celcius\n");
+        tempUnits = 'C';
     } else if (k == 'D') {
         printf("*** [sf_sset_chk_scale] * Set Scale :: Farenheit\n");
+        tempUnits = 'F';
     } else {
         printf("*** [sf_sset_chk_scale] * Set Scale :: INVALID KEY (ignored)\n");
     }
+    disp_settemp_scale(tempUnits);
+    disp_refresh();
     return NULL;
 }
 
@@ -166,6 +175,7 @@ void * sf_slpdly_invoke(char k) {
     sf_slpdlyData.sleepDelaySecs = digs_to_val(sf_slpdlyData.digs, sf_slpdlyData.digidx);
     // TODO - Call method to change temp setting
     printf("*** [sf_slpdly_invoke] * Sleep delay = %u\n", sf_slpdlyData.sleepDelaySecs);
+    setSleepDelay = sf_slpdlyData.sleepDelaySecs;
     return NULL; // end of the state chain
 }
 
@@ -181,6 +191,7 @@ void * sf_slpdly_wt_vals(char k) {
     if (k == '*') {
         if (sf_slpdlyData.digidx == 0) {
             printf("*** [sf_slpdly_wt_vals] * Sleep Delay RESET TO DEFAULT\n");
+            setSleepDelay = SLEEP_DELAY_DEFAULT;
         } else {
             printf("*** [sf_slpdly_wt_vals] * Operation Cancelled\n");
         }
@@ -192,7 +203,7 @@ void * sf_slpdly_wt_vals(char k) {
 
 // ****** States for Manual Sleep/Wake ****************************************
 
-static bool sw_isWoken = true;
+
 void * sf_slpWake(void) {
     if (sw_isWoken) {
         sw_isWoken = false;
@@ -214,12 +225,33 @@ void * sf_selectPreset(char k) {
     printf("*** [sf_selectPreset] * Checking preset index[%u]...\n", idx);
     if (idx < TEMP_PRESET_COUNT && tempPresets[idx].isValid) {
         printf("*** [sf_selectPreset] * Changing temp preset to Setting [%c] T=[%u]\n", k, tempPresets[idx].setTemp);
+        setTempPoint = tempPresets[idx].setTemp; // cache it, as this can be manually changed.
         disp_preset_show(k);
-        disp_pset_temp(tempPresets[idx].setTemp);
+        disp_pset_temp(setTempPoint);
         disp_refresh();
     } else {
         printf("*** [sf_selectPreset] * Preset not SET or selection invalid.\n");
     }
+    return NULL;
+}
+
+// ****** States for manual Temp Change ***************************************
+
+void * sf_dec_temp(int val) {
+    setTempPoint -= val;
+    disp_preset_show(' '); // temp now under manual control
+    disp_pset_temp(setTempPoint);
+    disp_refresh();
+    printf("*** [sf_dec_temp] * manual temp change to [%u]\n", setTempPoint);
+    return NULL;
+}
+
+void * sf_inc_temp(int val) {
+    setTempPoint += val;
+    disp_preset_show(' '); // temp now under manual control
+    disp_pset_temp(setTempPoint);
+    disp_refresh();
+    printf("*** [sf_inc_temp] * manual temp change to [%u]\n", setTempPoint);
     return NULL;
 }
 
@@ -270,6 +302,24 @@ static void * sf_menu_init(char k) {
     case '*':
         rc = sf_slpWake();
         break;
+    case '1':
+        rc = sf_dec_temp(1);
+        break;
+    case '4':
+        rc = sf_dec_temp(10);
+        break;
+    case '7':
+        rc = sf_dec_temp(50);
+        break;
+    case '2':
+        rc = sf_inc_temp(1);
+        break;
+    case '5':
+        rc = sf_inc_temp(10);
+        break;
+    case '8':
+        rc = sf_inc_temp(50);
+        break;
     default:
         rc = NULL;
     }
@@ -300,6 +350,13 @@ static stateFunction next_State = NULL;
 int ops_init(void) {
     next_State = NULL;
     init_temp_presets();
+    disp_pset_temp(setTempPoint);
+    disp_settemp_scale(tempUnits);
+    if (sw_isWoken)
+        disp_heat_on();
+    else
+        disp_cool_on();
+    disp_refresh();
     return 0;
 }
 
@@ -334,3 +391,22 @@ int ops_poll(char k) {
     return rc;
 }
 
+// current temp setting for iron
+uint32_t get_tipTempSetting(void) {
+    return setTempPoint;
+}
+
+// current temp scale ('C' | 'F')
+uint32_t get_tempScale(void) {
+    return tempUnits;
+}
+
+// get wake status, true := running and heating
+bool get_wakeStatus(void) {
+    return sw_isWoken;
+}
+
+// get delay before sleeping
+uint32_t get_sleepDelay(void) {
+    return setSleepDelay;
+}

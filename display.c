@@ -41,6 +41,9 @@
     /* wattage value (xxx) */
 #define WATT_TEXT_LINE      6
 #define WATT_TEXT_XPOS      11
+    /* Temp Scale Indicator */
+#define TMPSCALE_TEXT_LINE  WATT_TEXT_LINE
+#define TMPSCALE_TEXT_XPOS  18
     /* Power BAR indicator */
 #define PWR_BAR_TL_X        4       /* try to line up with Wattage text*/
 #define PWR_BAR_TL_Y        48
@@ -154,6 +157,8 @@ int disp_opscrn(void) {
         disp_pwr_bar(50);
         // Test wattage text update
         disp_pwr_txt(103);
+        // Initial temp scale
+        disp_settemp_scale('C');
         rc = disp_refresh();
     }
     return rc;
@@ -243,6 +248,17 @@ int disp_pwr_txt(int P) {
             textgfx_puts(pwr_wattage);
             rc = 0;
         }
+    }
+    return rc;
+}
+
+// set temp scale ('C','F')
+int disp_settemp_scale(char S) {
+    int rc = 1;
+    if (S == 'C' || S == 'F') {
+        textgfx_cursor(TMPSCALE_TEXT_XPOS, TMPSCALE_TEXT_LINE);
+        textgfx_putc(S);
+        rc = 0;
     }
     return rc;
 }
